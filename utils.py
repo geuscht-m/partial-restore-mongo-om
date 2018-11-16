@@ -10,12 +10,21 @@ import json
 import fcntl
 import errno
 
+# Helper - build the URLs
+def urlBuilder(settings, *parameters):
+    #print('len parameters is', len(parameters), 'parameters is', parameters)
+    retval = settings.opsmgrServerUrl + '/api/public/v1.0/'
+    retval += '/'.join(parameters)
+    return retval
+
+def authBuilder(settings):
+    return HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey)
 
 # get groupID from OpsMgr given a group name
 def getOpsMgrGroupId(name):
     retVal = None
     url = settings.opsmgrServerUrl + '/api/public/v1.0/groups'
-    resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         # This means something went wrong.
         print('---- ERROR Retrieving Ops Manager groups - ' + `resp.status_code` + ' was returned')
@@ -71,6 +80,31 @@ def getOpsMgrHost(name, group):
                     break
     return retVal
 
+def getGroupIdFromName(group_name):
+    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/byName/' + group_name
+    resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+    if resp.status_code != 200:
+        print(json.dumps(resp.json()))
+        return None
+    else:
+        return resp.json()['id']
+        
+# Get the cluster id for a cluster
+def getClusterId(group_id, cluster_name):
+    url = urlBuilder(settings, 'groups', group_id, 'clusters')
+    print('url is', url)
+    auth = authBuilder(settings)
+    resp = requests.get(url, auth=auth)
+    if resp.status_code != 200:
+        print(json.dumps(resp.json()))
+        return None
+    else:
+        #print('clusters is', resp.json())
+        for cluster_info in resp.json()['results']:
+            if cluster_info['clusterName'].lower() == cluster_name.lower():
+                return (cluster_info['id'], cluster_info['replicaSetName'])
+    return None
+    
 
 # get Host names, ID and ports given a group and rplset
 def getHostsInRplSet(rplSet, groupId):
@@ -197,6 +231,21 @@ def getPort(hostnameAndPort):
         retVal = int(p[1])
     return retVal
 
+
+def parseQueryableCollInfo(settings):
+    db_coll = settings.restoreCollection
+    parts = db_coll.split('.')
+    num_parts = len(parts)
+    if num_parts == 0:
+        return (None, None)
+    elif num_parts == 1:
+        return (parts[0], None)
+    elif num_parts == 2:
+        return (parts[0], parts[1])
+    else:
+        print('More parts than expected in the db/coll specification:', db_coll)
+        return (None, None)
+    
 
 # Create a lock to ensure that 2 MongoBot requests cannot take an action at the same time
 # Note that for OpsMgr type actions, the lock file is the group ID from OpsMgr as it's not
