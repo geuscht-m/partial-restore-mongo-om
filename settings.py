@@ -17,6 +17,12 @@ opsmgrDefaultGroup = 'wf-test' # If O/M group is not provided in chat, we will u
 
 # Queryable Backup settings
 restoreCollection = 'testdb.testcoll'
-queryableProxy    = 'mongodb://localhost:25000'
+queryableProxy    = 'localhost:27017'
+queryableDumpPath = '/Users/timo/tmp'
+queryableDumpName = 'db.dump'
 
-
+destinationCluster = {
+    'group' : 'Restore Group',
+    'cluster': 'wf-restored',
+    'rs-size': 3,  # NOTE: number of members in the replica set (per shard if sharded cluster)
+    'shards': 0 }  # NOTE: shards 0 means plain replica set

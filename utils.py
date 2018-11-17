@@ -245,7 +245,33 @@ def parseQueryableCollInfo(settings):
     else:
         print('More parts than expected in the db/coll specification:', db_coll)
         return (None, None)
+
+def splitHostAndPort(host_port_string):
+    elements = host_port_string.split(':')
+    if len(elements) == 1:
+        return (elements[0], '27017')
+    elif len(elements) == 2:
+        return (elements[0], elements[1])
+    else:
+        return (None, None)
     
+def createMongoDumpArgs(parameters, db_name, db_coll):
+    host, port = splitHostAndPort(parameters.queryableProxy)
+    args = [ 'mongodump', '-h', host, '-p', port, '-d', db_name, '-o', '/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]) ]
+    if db_coll is not None:
+        args.append('-c')
+        args.append(db_coll)
+    print('args is ', args)
+    return args
+
+def createMongoRestoreArgs(parameters, conn_str, db_name, db_coll, dump_path):
+    host, port = splitHostAndPort(conn_str)
+    args = [ 'mongorestore', '-h', host, '-p', port, '-d', db_name, dump_path ]
+    if db_coll is not None:
+        args.append('-c')
+        args.append(db_coll)
+    print('restore args is', args)
+    return args
 
 # Create a lock to ensure that 2 MongoBot requests cannot take an action at the same time
 # Note that for OpsMgr type actions, the lock file is the group ID from OpsMgr as it's not

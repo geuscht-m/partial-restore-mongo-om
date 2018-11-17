@@ -3,6 +3,7 @@ import utils
 import settings
 import requests
 import pymongo
+import subprocess
 
 def getQueryableBackupInfo(group_name, cluster, timestamp):
     group_id = utils.getOpsMgrGroupId(group_name)
@@ -56,8 +57,11 @@ def runTheWholeThing(group_name, cluster, timestamp, collection_name, settings_f
     #restoreCollection(collName, tempMDB)
     if checkQueryableBackupAccess(settings):
         print('Looks like we have a working queryable backup')
+        runMongoDump(settings)
+        conn_str = createDestinationCluster(settings)
+        runMongoRestore(conn_str, settings)
     else:
-        print("Couldn't find database or collection"≈)
+        print("Couldn't find database or collection, aborting")
 
 
 def checkQueryableBackupAccess(settings):
@@ -79,4 +83,24 @@ def checkQueryableBackupAccess(settings):
             return True
     return False
 
+def runMongoDump(parameters):
+    dump_path = parameters.queryableDumpPath
+    db_name,db_coll = utils.parseQueryableCollInfo(parameters)
+    dump_args = utils.createMongoDumpArgs(parameters, db_name, db_coll)
+    success   = subprocess.call(dump_args)
+    #output    = success.stdout.read()
+    #print("Output from mongodump:", success, output)
+    print('Output from mongodump:', success)
+    
+def createDestinationCluster(parameters):
+    connection_str = 'localhost:26000'
+    return connection_str
+
+def runMongoRestore(connection_str, parameters):
+    dump_path = parameters.queryableDumpPath
+    db_name, db_coll = utils.parseQueryableCollInfo(parameters)
+    restore_args = utils.createMongoRestoreArgs(parameters, connection_str, db_name, db_coll, dump_path)
+    success = subprocess.call(restore_args)
+    return success == 0
+    
 runTheWholeThing("Initial Group", "wf-test", 0, "testcoll", "settings")
