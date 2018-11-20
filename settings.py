@@ -24,5 +24,8 @@ queryableDumpName = 'db.dump'
 destinationCluster = {
     'group' : 'Restore Group',
     'cluster': 'wf-restored',
+    'server': ['n2'],
+    'ports': [ 26000, 26001, 26002 ],
     'rs-size': 3,  # NOTE: number of members in the replica set (per shard if sharded cluster)
+    'rs-name': 'wf-restore',
     'shards': 0 }  # NOTE: shards 0 means plain replica set

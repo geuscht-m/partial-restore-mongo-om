@@ -166,6 +166,7 @@ def getAllGroups():
 def getAutomationConfig(groupId):
     retVal = None
     url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/' + groupId + '/automationConfig'
+    print('get request url is', url)
     resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
     if resp.status_code != 200:
         # This means something went wrong.
@@ -175,6 +176,15 @@ def getAutomationConfig(groupId):
         retVal = resp.json()
     return retVal
 
+def pushAutomationConfig(group_id, config):
+    url = urlBuilder(settings, 'groups', group_id, 'automationConfig')
+    print('post request URL is', url)
+    resp = requests.put(url, auth=authBuilder(settings), data=json.dumps(config), headers={ 'Content-type':'application/json'})
+    if resp.status_code != 200:
+        print('Posting new automation config resulted in error', resp.status_code)
+        print(json.dumps(resp.json()))
+        return False
+    return True
 
 # Parse out minor version number from a string
 def getMinorVersion(version):

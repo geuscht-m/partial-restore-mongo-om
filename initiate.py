@@ -93,6 +93,33 @@ def runMongoDump(parameters):
     print('Output from mongodump:', success)
     
 def createDestinationCluster(parameters):
+    group_id = utils.getGroupIdFromName(parameters.destinationCluster['group'])
+    config = utils.getAutomationConfig(group_id)
+    for port in parameters.destinationCluster['ports']:
+        process = {
+            'version': '4.0.4',
+            'name': parameters.destinationCluster['cluster'] + '_' + str(port),
+            'hostname': parameters.destinationCluster['server'],
+            'logRotate': {
+                'sizeThresholdMB': 1000,
+                'timeThresholdHRs': 24
+            },
+            'authSchemaVersion': 5,
+            'processType': 'mongod',
+            'args2_6': {
+                'net': { 'port': port },
+                'storage' : { 'dbPath': '/data/' + str(port) },
+                'systemLog': {
+                    'path': '/data/' + str(port) + '/mongod.log',
+                    'destination': 'file'
+                },
+                'replication': { 'replSetName': parameters.destinationCluster['rs-name'] }
+            }
+        }
+        config['processes'].append(process)
+            
+    print(config['processes'])
+    success = utils.pushAutomationConfig(group_id, config)
     connection_str = 'localhost:26000'
     return connection_str
 
