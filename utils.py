@@ -9,6 +9,7 @@ import time
 import json
 import fcntl
 import errno
+import urllib
 
 # Helper - build the URLs
 def urlBuilder(settings, *parameters):
@@ -81,8 +82,9 @@ def getOpsMgrHost(name, group):
     return retVal
 
 def getGroupIdFromName(group_name):
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/byName/' + group_name
-    resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/byName/' + urllib.quote(group_name)
+    print('group id from name url is ', url)
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         print(json.dumps(resp.json()))
         return None
@@ -267,7 +269,7 @@ def splitHostAndPort(host_port_string):
     
 def createMongoDumpArgs(parameters, db_name, db_coll):
     host, port = splitHostAndPort(parameters.queryableProxy)
-    args = [ 'mongodump', '-h', host, '-p', port, '-d', db_name, '-o', '/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]) ]
+    args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name, '-o', '/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]) ]
     if db_coll is not None:
         args.append('-c')
         args.append(db_coll)
