@@ -4,6 +4,7 @@ import settings
 import requests
 import pymongo
 import subprocess
+import pprint
 
 def getQueryableBackupInfo(group_name, cluster, timestamp):
     group_id = utils.getOpsMgrGroupId(group_name)
@@ -50,16 +51,11 @@ def removeSettings(config):
 def runTheWholeThing(group_name, cluster, timestamp, collection_name, settings_file):
     storedSettings = loadSettingsFile(settings_file)
 
-    #qb = getQueryableBackupInfo(group_name, cluster, timestamp)
-    #tempMDB = startTempMongoD(storedSettings['tmpRestoreGroup'], storedSettings['RSSettings'])
-
-    #dumpCollection(collName)
-    #restoreCollection(collName, tempMDB)
     if checkQueryableBackupAccess(settings):
         print('Looks like we have a working queryable backup')
-        runMongoDump(settings)
-        conn_str = createDestinationCluster(settings)
-        runMongoRestore(conn_str, settings)
+        if runMongoDump(settings):
+            conn_str = createDestinationCluster(settings)
+            runMongoRestore(conn_str, settings)
     else:
         print("Couldn't find database or collection, aborting")
 
@@ -88,23 +84,28 @@ def runMongoDump(parameters):
     db_name,db_coll = utils.parseQueryableCollInfo(parameters)
     dump_args = utils.createMongoDumpArgs(parameters, db_name, db_coll)
     success   = subprocess.call(dump_args)
-    #output    = success.stdout.read()
-    #print("Output from mongodump:", success, output)
     print('Output from mongodump:', success)
+    return success == 0
     
 def createDestinationCluster(parameters):
+    printSourceClusterConfig(parameters.sourceCluster['group'], parameters)
     group_id = utils.getGroupIdFromName(parameters.destinationCluster['group'])
     config = utils.getAutomationConfig(group_id)
+    replicaSetMembers = []
+    rs_index = 0
     for port in parameters.destinationCluster['ports']:
         process = {
             'version': '4.0.4',
             'name': parameters.destinationCluster['cluster'] + '_' + str(port),
-            'hostname': parameters.destinationCluster['server'],
+            'hostname': parameters.destinationCluster['server'][0],
             'logRotate': {
-                'sizeThresholdMB': 1000,
-                'timeThresholdHRs': 24
+                'sizeThresholdMB': 1000.0,
+                'timeThresholdHrs': 24
             },
+            "manualMode":False,
             'authSchemaVersion': 5,
+            "disabled":False,
+            "featureCompatibilityVersion":"4.0",
             'processType': 'mongod',
             'args2_6': {
                 'net': { 'port': port },
@@ -117,8 +118,22 @@ def createDestinationCluster(parameters):
             }
         }
         config['processes'].append(process)
+        replicaSetMembers.append({ u'_id': rs_index,
+                                  u'arbiterOnly': False,
+                                  u'buildIndexes': True,
+                                  u'hidden': False,
+                                  u'host': parameters.destinationCluster['cluster'] + '_' + str(port),
+                                  u'priority': 1.0,
+                                  u'slaveDelay': 0,
+                                  u'votes': 1})
+        rs_index += 1
+        
+    config['replicaSets'].append({ '_id' : parameters.destinationCluster['cluster'],
+                                   'members': replicaSetMembers,
+                                   'protocolVersion':parameters.destinationCluster['protocolVersion']})
             
-    print(config['processes'])
+    pp =  pprint.PrettyPrinter(indent=2)
+    pp.pprint(config)
     success = utils.pushAutomationConfig(group_id, config)
     connection_str = 'localhost:26000'
     return connection_str
@@ -129,5 +144,11 @@ def runMongoRestore(connection_str, parameters):
     restore_args = utils.createMongoRestoreArgs(parameters, connection_str, db_name, db_coll, dump_path)
     success = subprocess.call(restore_args)
     return success == 0
-    
+
+def printSourceClusterConfig(clusterName, parameters):
+    group_id = utils.getGroupIdFromName(parameters.sourceCluster['group'])
+    config = utils.getAutomationConfig(group_id)
+    pp = pprint.PrettyPrinter(indent=2)
+    pp.pprint(config)
+
 runTheWholeThing("Initial Group", "wf-test", 0, "testcoll", "settings")
