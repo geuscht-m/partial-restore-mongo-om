@@ -10,12 +10,13 @@ import json
 import fcntl
 import errno
 import urllib
+import pprint
 
 # Helper - build the URLs
 def urlBuilder(settings, *parameters):
     #print('len parameters is', len(parameters), 'parameters is', parameters)
     retval = settings.opsmgrServerUrl + '/api/public/v1.0/'
-    retval += '/'.join(parameters)
+    retval += '/'.join(filter(None, parameters))
     return retval
 
 def authBuilder(settings):
@@ -83,7 +84,7 @@ def getOpsMgrHost(name, group):
 
 def getGroupIdFromName(group_name):
     url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/byName/' + urllib.quote(group_name)
-    print('group id from name url is ', url)
+    #print('group id from name url is ', url)
     resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         print(json.dumps(resp.json()))
@@ -167,9 +168,9 @@ def getAllGroups():
 # Pull automation config for a group
 def getAutomationConfig(groupId):
     retVal = None
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/' + groupId + '/automationConfig'
+    url = urlBuilder(settings, 'groups', groupId, 'automationConfig')
     print('get request url is', url)
-    resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         # This means something went wrong.
         print('---- ERROR Retrieving Automation Config - ' + `resp.status_code` + ' was returned')
@@ -178,8 +179,8 @@ def getAutomationConfig(groupId):
         retVal = resp.json()
     return retVal
 
-def pushAutomationConfig(group_id, config):
-    url = urlBuilder(settings, 'groups', group_id, 'automationConfig')
+def pushAutomationConfigUpdate(group_id, config, url_suffix = None):
+    url = urlBuilder(settings, 'groups', group_id, 'automationConfig', url_suffix)
     print('post request URL is', url)
     resp = requests.put(url, auth=authBuilder(settings), data=json.dumps(config), headers={ 'Content-type':'application/json'})
     if resp.status_code != 200:
@@ -187,6 +188,12 @@ def pushAutomationConfig(group_id, config):
         print(json.dumps(resp.json()))
         return False
     return True
+    
+def pushMonitoringConfig(group_id, config):
+    return pushAutomationConfigUpdate(group_id, config, 'monitoringAgentConfig')
+
+def pushAutomationConfig(group_id, config):
+    return pushAutomationConfigUpdate(group_id, config)
 
 # Parse out minor version number from a string
 def getMinorVersion(version):
@@ -277,14 +284,66 @@ def createMongoDumpArgs(parameters, db_name, db_coll):
     return args
 
 def createMongoRestoreArgs(parameters, conn_str, db_name, db_coll, dump_path):
-    host, port = splitHostAndPort(conn_str)
-    args = [ 'mongorestore', '-h', host, '-p', port, '-d', db_name, dump_path ]
+    args = [ 'mongorestore', '--uri=' + conn_str, '-d', db_name, dump_path ]
     if db_coll is not None:
         args.append('-c')
         args.append(db_coll)
     print('restore args is', args)
     return args
 
+def isMonitoringAgentPresent(config):
+    # Check if we have monitoring agent versions present
+    if not config['monitoringVersions']:
+        return False
+    return True
+
+def installMonitoringAgent(group_id, monitoring_config):
+    if not monitoring_config:
+        raise Exception("Source monitoring config is empty, cannot duplicate")
+    if not settings.destinationCluster['server']:
+        raise Exception("No destination servers specified")
+    #first_server_monitoring = monitoring_config[0]
+    #first_server_monitoring['hostname'] = settings.destinationCluster['server'][0]
+    monitoring_hostname = settings.destinationCluster['server'][0]
+    monitoring_settings = { 'hostname':monitoring_hostname }
+    #pp = pprint.PrettyPrinter(indent = 2)
+    #pp.pprint(first_server_monitoring)
+    config = getAutomationConfig(group_id)
+    config['monitoringVersions'].append(monitoring_settings)
+    #config['backupVersions'][0]['hostname'] = settings.destinationCluster['server'][0]
+    #json_config = json.dumps(config)
+    #pp = pprint.PrettyPrinter(indent = 2)
+    #pp.pprint(json_config)
+    pushAutomationConfig(group_id, config)
+    #waitForAutomationStatus(group_id)
+                        
+
+def waitForAutomationStatus(group_id):
+    while True:
+        url = urlBuilder(settings, 'groups', group_id, 'automationStatus')
+        resp = requests.get(url, auth=authBuilder(settings))
+        if resp.status_code != 200:
+            raise Exception('Unable to retrieve automation status, status_code was', resp.status_code)
+        status = resp.json()
+        goalVersion = status['goalVersion']
+        if not filter(lambda(x): x['lastGoalVersionAchieved'] < goalVersion, status['processes']):
+            print('All processes in goal state')
+            break
+        time.sleep(5)
+    
+    
+def waitForAgentInstall(group_id):
+    waitForAutomationStatus(group_id)
+
+
+def buildTargetMDBUri():
+    if (len(settings.destinationCluster['server']) != len(settings.destinationCluster['ports'])):
+        raise Exception("length of server and ports arrays do not match, unable to build URI")
+    uri = "mongodb://"
+    for i in range(len(settings.destinationCluster['server'])):
+        uri +=  settings.destinationCluster['server'][i] + ":" + str(settings.destinationCluster['ports'][i]) + ","
+    return uri
+    
 # Create a lock to ensure that 2 MongoBot requests cannot take an action at the same time
 # Note that for OpsMgr type actions, the lock file is the group ID from OpsMgr as it's not
 # a problem to modify different OpsMgr groups concurrently.
@@ -311,4 +370,3 @@ class FileLock:
                     waited += 1
                     if waited >= settings.waitForGroupLockSeconds:
                         return False
-

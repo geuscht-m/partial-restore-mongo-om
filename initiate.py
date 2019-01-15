@@ -8,9 +8,7 @@ import pprint
 
 def getQueryableBackupInfo(group_name, cluster, timestamp):
     group_id = utils.getOpsMgrGroupId(group_name)
-    #print("Group id for group", group_name, " is ", groupId)
     clusterID, replSets = getClusters(group_id, cluster)
-    #print("getClusters returned ", clusterID, "and", replSets)
     backupInfo = startRestoreJob(group_id, clusterID, replSets, timestamp)
 
     return backupInfo
@@ -88,9 +86,16 @@ def runMongoDump(parameters):
     return success == 0
     
 def createDestinationCluster(parameters):
-    printSourceClusterConfig(parameters.sourceCluster['group'], parameters)
-    group_id = utils.getGroupIdFromName(parameters.destinationCluster['group'])
-    config = utils.getAutomationConfig(group_id)
+    monitoring_config = getSourceClusterMonitoringConfig(parameters.sourceCluster['group'], parameters)
+    dest_group_id = utils.getGroupIdFromName(parameters.destinationCluster['group'])
+    config = utils.getAutomationConfig(dest_group_id)
+    #utils.pushAutomationConfig(parameters.sourceCluster['group'], config)
+    #raise Exception("push done")
+    if not utils.isMonitoringAgentPresent(config):
+        utils.installMonitoringAgent(dest_group_id, monitoring_config)
+        #raise Exception("Stop the madness!")
+        utils.waitForAutomationStatus(dest_group_id)
+        
     replicaSetMembers = []
     rs_index = 0
     for port in parameters.destinationCluster['ports']:
@@ -104,6 +109,7 @@ def createDestinationCluster(parameters):
             },
             "manualMode":False,
             'authSchemaVersion': 5,
+
             "disabled":False,
             "featureCompatibilityVersion":"4.0",
             'processType': 'mongod',
@@ -132,11 +138,13 @@ def createDestinationCluster(parameters):
                                    'members': replicaSetMembers,
                                    'protocolVersion':parameters.destinationCluster['protocolVersion']})
             
-    pp =  pprint.PrettyPrinter(indent=2)
-    pp.pprint(config)
-    success = utils.pushAutomationConfig(group_id, config)
-    connection_str = 'localhost:26000'
-    return connection_str
+    #pp =  pprint.PrettyPrinter(indent=2)
+    #pp.pprint(config)
+    success = utils.pushAutomationConfig(dest_group_id, config)
+    if not success:
+        raise Exception("Pushing the new replica set configuration failed")
+    utils.waitForAutomationStatus(dest_group_id)
+    return utils.buildTargetMDBUri()
 
 def runMongoRestore(connection_str, parameters):
     dump_path = parameters.queryableDumpPath
@@ -145,10 +153,11 @@ def runMongoRestore(connection_str, parameters):
     success = subprocess.call(restore_args)
     return success == 0
 
-def printSourceClusterConfig(clusterName, parameters):
+def getSourceClusterMonitoringConfig(clusterName, parameters):
     group_id = utils.getGroupIdFromName(parameters.sourceCluster['group'])
     config = utils.getAutomationConfig(group_id)
     pp = pprint.PrettyPrinter(indent=2)
     pp.pprint(config)
+    return config['monitoringVersions']
 
 runTheWholeThing("Initial Group", "wf-test", 0, "testcoll", "settings")
