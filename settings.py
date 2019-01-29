@@ -11,7 +11,7 @@ waitForRestartSeconds = 15
 # Ops Manager settings
 opsmgrServerUrl = 'http://localhost:8080' # Be sure there is no trailing slash here
 opsmgrUser = 'admin'
-opsmgrApiKey = '8fcedbc9-bf61-45fd-a145-e890c4b943e4'
+opsmgrApiKey = '8155a1a2-99e2-4eac-9e13-d61855420afb'
 opsmgrWebHookReturnValue = '{"ok": true}' # Value OpsMgr want to see returned from the webhook if all went well
 opsmgrDefaultGroup = 'wf-test' # If O/M group is not provided in chat, we will use this one
 
@@ -28,7 +28,7 @@ sourceCluster = {
 destinationCluster = {
     'group' : 'Restore Group',
     'cluster': 'wf-restore',
-    'server': ['r1', 'r1', 'r1'],
+    'server': ['r1', 'r1', 'r2'],
     'ports': [ 28000, 28001, 28002 ],
     'rs-size': 3,  # NOTE: number of members in the replica set (per shard if sharded cluster)
     'rs-name': 'wf-restore',

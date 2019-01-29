@@ -284,10 +284,8 @@ def createMongoDumpArgs(parameters, db_name, db_coll):
     return args
 
 def createMongoRestoreArgs(parameters, conn_str, db_name, db_coll, dump_path):
-    args = [ 'mongorestore', '--uri=' + conn_str, '-d', db_name, dump_path ]
-    if db_coll is not None:
-        args.append('-c')
-        args.append(db_coll)
+    args = [ 'mongorestore', '--uri=' + conn_str, '--nsInclude', db_name + '.' + db_coll]
+    args.append(dump_path + '/db.dump/')
     print('restore args is', args)
     return args
 
