@@ -98,11 +98,11 @@ def createDestinationCluster(parameters):
         
     replicaSetMembers = []
     rs_index = 0
-    for port in parameters.destinationCluster['ports']:
+    for index, port in enumerate(parameters.destinationCluster['ports']):
         process = {
             'version': '4.0.4',
             'name': parameters.destinationCluster['cluster'] + '_' + str(port),
-            'hostname': parameters.destinationCluster['server'][0],
+            'hostname': parameters.destinationCluster['server'][index],
             'logRotate': {
                 'sizeThresholdMB': 1000.0,
                 'timeThresholdHrs': 24
@@ -138,8 +138,8 @@ def createDestinationCluster(parameters):
                                    'members': replicaSetMembers,
                                    'protocolVersion':parameters.destinationCluster['protocolVersion']})
             
-    #pp =  pprint.PrettyPrinter(indent=2)
-    #pp.pprint(config)
+    pp =  pprint.PrettyPrinter(indent=2)
+    pp.pprint(config)
     success = utils.pushAutomationConfig(dest_group_id, config)
     if not success:
         raise Exception("Pushing the new replica set configuration failed")
@@ -156,8 +156,8 @@ def runMongoRestore(connection_str, parameters):
 def getSourceClusterMonitoringConfig(clusterName, parameters):
     group_id = utils.getGroupIdFromName(parameters.sourceCluster['group'])
     config = utils.getAutomationConfig(group_id)
-    pp = pprint.PrettyPrinter(indent=2)
-    pp.pprint(config)
+    #pp = pprint.PrettyPrinter(indent=2)
+    #pp.pprint(config)
     return config['monitoringVersions']
 
 runTheWholeThing("Initial Group", "wf-test", 0, "testcoll", "settings")
