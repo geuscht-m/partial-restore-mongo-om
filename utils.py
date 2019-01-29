@@ -3,8 +3,8 @@
 import settings
 import requests
 from requests.auth import HTTPDigestAuth
-from datetime import datetime
-import dateutil.parser
+#from datetime import datetime
+#import dateutil.parser
 import time
 import json
 import fcntl
@@ -55,8 +55,8 @@ def getOpsMgrHost(name, group):
     retVal = None
     host = getHostName(name)
     port = getPort(name)
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/' + group + "/hosts"
-    resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+    url  = urlBuilder(settings, 'groups', group, '/hosts')
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         # This means something went wrong.
         print('---- ERROR Retrieving Ops Manager Hosts - ' + `resp.status_code` + ' was returned')
@@ -232,9 +232,9 @@ def getNextMinorVersion(automationConfig, version):
 
 
 # get UTC Offset
-def getUTCOffset():
-    now_timestamp = time.time()
-    return (datetime.fromtimestamp(now_timestamp) - datetime.utcfromtimestamp(now_timestamp))
+#def getUTCOffset():
+#    now_timestamp = time.time()
+#    return (datetime.fromtimestamp(now_timestamp) - datetime.utcfromtimestamp(now_timestamp))
 
 
 # Strip port number from OpsMgr host
@@ -276,10 +276,12 @@ def splitHostAndPort(host_port_string):
     
 def createMongoDumpArgs(parameters, db_name, db_coll):
     host, port = splitHostAndPort(parameters.queryableProxy)
-    args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name, '-o', '/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]) ]
+    args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name ]
     if db_coll is not None:
         args.append('-c')
         args.append(db_coll)
+    args.append('-o')
+    args.append('/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]))
     print('args is ', args)
     return args
 
@@ -332,39 +334,3 @@ def waitForAutomationStatus(group_id):
     
 def waitForAgentInstall(group_id):
     waitForAutomationStatus(group_id)
-
-
-def buildTargetMDBUri():
-    if (len(settings.destinationCluster['server']) != len(settings.destinationCluster['ports'])):
-        raise Exception("length of server and ports arrays do not match, unable to build URI")
-    uri = "mongodb://"
-    for i in range(len(settings.destinationCluster['server'])):
-        uri +=  settings.destinationCluster['server'][i] + ":" + str(settings.destinationCluster['ports'][i]) + ","
-    return uri
-    
-# Create a lock to ensure that 2 MongoBot requests cannot take an action at the same time
-# Note that for OpsMgr type actions, the lock file is the group ID from OpsMgr as it's not
-# a problem to modify different OpsMgr groups concurrently.
-class FileLock:
-    def __init__(self, filename=None):
-        self.filename = './MONGODB_AUTOMATION_LOCK_FILE' if filename is None else filename
-        self.lock_file = open(self.filename, 'w+')
-
-    def unlock(self):
-        fcntl.flock(self.lock_file, fcntl.LOCK_UN)
-
-    def lock(self):
-        waited = 0
-        while True:
-            try:
-                fcntl.flock(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-
-                return True
-            except IOError as e:
-                if e.errno != errno.EAGAIN:
-                    raise e
-                else:
-                    time.sleep(1)
-                    waited += 1
-                    if waited >= settings.waitForGroupLockSeconds:
-                        return False
