@@ -94,10 +94,8 @@ def getGroupIdFromName(group_name):
         
 # Get the cluster id for a cluster
 def getClusterId(group_id, cluster_name):
-    url = urlBuilder(settings, 'groups', group_id, 'clusters')
-    print('url is', url)
-    auth = authBuilder(settings)
-    resp = requests.get(url, auth=auth)
+    url  = urlBuilder(settings, 'groups', group_id, 'clusters')
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         print(json.dumps(resp.json()))
         return None
@@ -126,8 +124,8 @@ def getHostsInRplSet(rplSet, groupId):
 def getHostsInGroup(groupId):
     retVal = None
     if groupId is not None:
-        url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/' + groupId + "/hosts"
-        resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+        url  = urlBuilder(settings, 'groups', groupId, 'hosts')
+        resp = requests.get(url, auth=authBuilder(settings))
         if resp.status_code != 200:
             # This means something went wrong.
             print('---- ERROR Retrieving Ops Manager Hosts - ' + `resp.status_code` + ' was returned')
@@ -154,8 +152,8 @@ def getAllHosts():
 # Get all groups for OpsMgr
 def getAllGroups():
     retVal = None
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups'
-    resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+    url  = urlBuilder(settings, 'groups')
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         # This means something went wrong.
         print('---- ERROR Retrieving Groups - ' + `resp.status_code` + ' was returned')
@@ -244,12 +242,7 @@ def getHostName(hostnameAndPort):
 
 # Get port number from OpsMgr host
 def getPort(hostnameAndPort):
-    retVal = None
-    p = hostnameAndPort.split(':')
-    if len(p) > 1:
-        retVal = int(p[1])
-    return retVal
-
+    return splitHostAndPort(hostnameAndPort)[1]
 
 def parseQueryableCollInfo(settings):
     db_coll = settings.restoreCollection
@@ -334,3 +327,11 @@ def waitForAutomationStatus(group_id):
     
 def waitForAgentInstall(group_id):
     waitForAutomationStatus(group_id)
+
+def buildTargetMDBUri():
+    if (len(settings.destinationCluster['server']) != len(settings.destinationCluster['ports'])):
+        raise Exception("length of server and ports arrays do not match, unable to build URI")
+    uri = "mongodb://"
+    for i in range(len(settings.destinationCluster['server'])):
+        uri +=  settings.destinationCluster['server'][i] + ":" + str(settings.destinationCluster['ports'][i]) + ","
+    return uri
