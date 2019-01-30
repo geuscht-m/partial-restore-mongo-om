@@ -3,12 +3,10 @@
 import settings
 import requests
 from requests.auth import HTTPDigestAuth
-#from datetime import datetime
-#import dateutil.parser
 import time
 import json
-import fcntl
-import errno
+#import fcntl
+#import errno
 import urllib
 import pprint
 
@@ -100,7 +98,6 @@ def getClusterId(group_id, cluster_name):
         print(json.dumps(resp.json()))
         return None
     else:
-        #print('clusters is', resp.json())
         for cluster_info in resp.json()['results']:
             if cluster_info['clusterName'].lower() == cluster_name.lower():
                 return (cluster_info['id'], cluster_info['replicaSetName'])
