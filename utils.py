@@ -5,8 +5,6 @@ import requests
 from requests.auth import HTTPDigestAuth
 import time
 import json
-#import fcntl
-#import errno
 import urllib
 import pprint
 
@@ -189,39 +187,6 @@ def pushMonitoringConfig(group_id, config):
 
 def pushAutomationConfig(group_id, config):
     return pushAutomationConfigUpdate(group_id, config)
-
-# Parse out minor version number from a string
-#def getMinorVersion(version):
-#    n = version.split('-')[0]
-#    l = n.split('.')
-#    v = l[len(l) - 1]
-#    return int(v)
-
-
-# Parse out major version as a string (i.e. '3.2')
-# def getMajorVersion(version):
-#     l = version.split('.')
-#     return l[0] + '.' + l[1]
-
-
-# Get next available minor version based on version sent in
-# i.e.  3.2.11-ent  would return 3.2.12-ent if enabled
-#       Note that it might skip versions too : 3.2.11-ent -> 3.2.14-ent
-# def getNextMinorVersion(automationConfig, version):
-#     retVal = None
-#     currentMinor = getMinorVersion(version)
-#     desiredMinor = 999
-#     currentMajor = getMajorVersion(version)
-
-#     for v in automationConfig['mongoDbVersions'] :
-#         if getMajorVersion(v['name']) == currentMajor and \
-#                 getMinorVersion(v['name']) > currentMinor and \
-#                 v['name'].endswith('ent') == version.endswith('ent') and \
-#                 getMinorVersion(v['name']) < desiredMinor:
-#             desiredMinor = getMinorVersion(v['name'])
-#             retVal = v['name']
-
-#     return retVal
 
 # Strip port number from OpsMgr host
 def getHostName(hostnameAndPort):
