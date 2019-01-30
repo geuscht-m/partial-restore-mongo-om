@@ -191,50 +191,41 @@ def pushAutomationConfig(group_id, config):
     return pushAutomationConfigUpdate(group_id, config)
 
 # Parse out minor version number from a string
-def getMinorVersion(version):
-    n = version.split('-')[0]
-    l = n.split('.')
-    v = l[len(l) - 1]
-    return int(v)
+#def getMinorVersion(version):
+#    n = version.split('-')[0]
+#    l = n.split('.')
+#    v = l[len(l) - 1]
+#    return int(v)
 
 
 # Parse out major version as a string (i.e. '3.2')
-def getMajorVersion(version):
-    l = version.split('.')
-    return l[0] + '.' + l[1]
+# def getMajorVersion(version):
+#     l = version.split('.')
+#     return l[0] + '.' + l[1]
 
 
 # Get next available minor version based on version sent in
 # i.e.  3.2.11-ent  would return 3.2.12-ent if enabled
 #       Note that it might skip versions too : 3.2.11-ent -> 3.2.14-ent
-def getNextMinorVersion(automationConfig, version):
-    retVal = None
-    currentMinor = getMinorVersion(version)
-    desiredMinor = 999
-    currentMajor = getMajorVersion(version)
+# def getNextMinorVersion(automationConfig, version):
+#     retVal = None
+#     currentMinor = getMinorVersion(version)
+#     desiredMinor = 999
+#     currentMajor = getMajorVersion(version)
 
-    for v in automationConfig['mongoDbVersions'] :
-        if getMajorVersion(v['name']) == currentMajor and \
-                getMinorVersion(v['name']) > currentMinor and \
-                v['name'].endswith('ent') == version.endswith('ent') and \
-                getMinorVersion(v['name']) < desiredMinor:
-            desiredMinor = getMinorVersion(v['name'])
-            retVal = v['name']
+#     for v in automationConfig['mongoDbVersions'] :
+#         if getMajorVersion(v['name']) == currentMajor and \
+#                 getMinorVersion(v['name']) > currentMinor and \
+#                 v['name'].endswith('ent') == version.endswith('ent') and \
+#                 getMinorVersion(v['name']) < desiredMinor:
+#             desiredMinor = getMinorVersion(v['name'])
+#             retVal = v['name']
 
-    return retVal
-
-
-
-
-# get UTC Offset
-#def getUTCOffset():
-#    now_timestamp = time.time()
-#    return (datetime.fromtimestamp(now_timestamp) - datetime.utcfromtimestamp(now_timestamp))
-
+#     return retVal
 
 # Strip port number from OpsMgr host
 def getHostName(hostnameAndPort):
-    return hostnameAndPort.split(':')[0]
+    return splitHostAndPort(hostnameAndPort)æ[0]
 
 
 # Get port number from OpsMgr host
