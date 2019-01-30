@@ -225,7 +225,7 @@ def pushAutomationConfig(group_id, config):
 
 # Strip port number from OpsMgr host
 def getHostName(hostnameAndPort):
-    return splitHostAndPort(hostnameAndPort)æ[0]
+    return splitHostAndPort(hostnameAndPort)[0]
 
 
 # Get port number from OpsMgr host
