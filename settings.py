@@ -16,16 +16,18 @@ opsmgrWebHookReturnValue = '{"ok": true}' # Value OpsMgr want to see returned fr
 opsmgrDefaultGroup = 'wf-test' # If O/M group is not provided in chat, we will use this one
 
 # Queryable Backup settings
-restoreCollection = 'testdb.testcoll'
-queryableProxy    = 'localhost:29000'
-queryableDumpPath = '/Users/timo/tmp'
-queryableDumpName = 'db.dump'
+queryableBackupSettings = {
+    sourceCollection  = 'testdb.testcoll'
+    queryableProxy    = 'localhost:29000'
+    dumpPath          = '/Users/timo/tmp'
+    dumpName          = 'db.dump'
+}
 
 sourceCluster = {
     'group' : 'Initial Group'
-    }
+}
 
-destinationCluster = {
+tempDestinationCluster = {
     'group' : 'Restore Group',
     'cluster': 'wf-restore',
     'server': ['r1', 'r1', 'r2'],
@@ -34,4 +36,7 @@ destinationCluster = {
     'rs-name': 'wf-restore',
     'shards': 0,   # NOTE: shards 0 means plain replica set
     'protocolVersion': 1
+}
+
+restoreTargetCluster = {
 }

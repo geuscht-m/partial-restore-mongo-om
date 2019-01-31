@@ -88,7 +88,7 @@ def runMongoDump(parameters):
     
 def createDestinationCluster(parameters):
     monitoring_config = getSourceClusterMonitoringConfig(parameters.sourceCluster['group'], parameters)
-    dest_group_id = utils.getGroupIdFromName(parameters.destinationCluster['group'])
+    dest_group_id = utils.getGroupIdFromName(parameters.tempDestinationCluster['group'])
     config = utils.getAutomationConfig(dest_group_id)
     #utils.pushAutomationConfig(parameters.sourceCluster['group'], config)
     #raise Exception("push done")
@@ -100,11 +100,11 @@ def createDestinationCluster(parameters):
         
     replicaSetMembers = []
     rs_index = 0
-    for index, port in enumerate(parameters.destinationCluster['ports']):
+    for index, port in enumerate(parameters.tempDestinationCluster['ports']):
         process = {
             'version': '4.0.4',
-            'name': parameters.destinationCluster['cluster'] + '_' + str(port),
-            'hostname': parameters.destinationCluster['server'][index],
+            'name': parameters.tempDestinationCluster['cluster'] + '_' + str(port),
+            'hostname': parameters.tempDestinationCluster['server'][index],
             'logRotate': {
                 'sizeThresholdMB': 1000.0,
                 'timeThresholdHrs': 24
@@ -122,7 +122,7 @@ def createDestinationCluster(parameters):
                     'path': '/data/' + str(port) + '/mongod.log',
                     'destination': 'file'
                 },
-                'replication': { 'replSetName': parameters.destinationCluster['rs-name'] }
+                'replication': { 'replSetName': parameters.tempDestinationCluster['rs-name'] }
             }
         }
         config['processes'].append(process)
@@ -130,15 +130,15 @@ def createDestinationCluster(parameters):
                                   u'arbiterOnly': False,
                                   u'buildIndexes': True,
                                   u'hidden': False,
-                                  u'host': parameters.destinationCluster['cluster'] + '_' + str(port),
+                                  u'host': parameters.tempDestinationCluster['cluster'] + '_' + str(port),
                                   u'priority': 1.0,
                                   u'slaveDelay': 0,
                                   u'votes': 1})
         rs_index += 1
         
-    config['replicaSets'].append({ '_id' : parameters.destinationCluster['cluster'],
+    config['replicaSets'].append({ '_id' : parameters.tempDestinationCluster['cluster'],
                                    'members': replicaSetMembers,
-                                   'protocolVersion':parameters.destinationCluster['protocolVersion']})
+                                   'protocolVersion':parameters.tempDestinationCluster['protocolVersion']})
             
     pp =  pprint.PrettyPrinter(indent=2)
     pp.pprint(config)
