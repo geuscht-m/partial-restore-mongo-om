@@ -3,12 +3,8 @@
 import settings
 import requests
 from requests.auth import HTTPDigestAuth
-from datetime import datetime
-import dateutil.parser
 import time
 import json
-import fcntl
-import errno
 import urllib
 import pprint
 
@@ -55,8 +51,8 @@ def getOpsMgrHost(name, group):
     retVal = None
     host = getHostName(name)
     port = getPort(name)
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/' + group + "/hosts"
-    resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+    url  = urlBuilder(settings, 'groups', group, '/hosts')
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         # This means something went wrong.
         print('---- ERROR Retrieving Ops Manager Hosts - ' + `resp.status_code` + ' was returned')
@@ -94,15 +90,12 @@ def getGroupIdFromName(group_name):
         
 # Get the cluster id for a cluster
 def getClusterId(group_id, cluster_name):
-    url = urlBuilder(settings, 'groups', group_id, 'clusters')
-    print('url is', url)
-    auth = authBuilder(settings)
-    resp = requests.get(url, auth=auth)
+    url  = urlBuilder(settings, 'groups', group_id, 'clusters')
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         print(json.dumps(resp.json()))
         return None
     else:
-        #print('clusters is', resp.json())
         for cluster_info in resp.json()['results']:
             if cluster_info['clusterName'].lower() == cluster_name.lower():
                 return (cluster_info['id'], cluster_info['replicaSetName'])
@@ -126,8 +119,8 @@ def getHostsInRplSet(rplSet, groupId):
 def getHostsInGroup(groupId):
     retVal = None
     if groupId is not None:
-        url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/' + groupId + "/hosts"
-        resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+        url  = urlBuilder(settings, 'groups', groupId, 'hosts')
+        resp = requests.get(url, auth=authBuilder(settings))
         if resp.status_code != 200:
             # This means something went wrong.
             print('---- ERROR Retrieving Ops Manager Hosts - ' + `resp.status_code` + ' was returned')
@@ -154,8 +147,8 @@ def getAllHosts():
 # Get all groups for OpsMgr
 def getAllGroups():
     retVal = None
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups'
-    resp = requests.get(url, auth=HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey))
+    url  = urlBuilder(settings, 'groups')
+    resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         # This means something went wrong.
         print('---- ERROR Retrieving Groups - ' + `resp.status_code` + ' was returned')
@@ -195,61 +188,14 @@ def pushMonitoringConfig(group_id, config):
 def pushAutomationConfig(group_id, config):
     return pushAutomationConfigUpdate(group_id, config)
 
-# Parse out minor version number from a string
-def getMinorVersion(version):
-    n = version.split('-')[0]
-    l = n.split('.')
-    v = l[len(l) - 1]
-    return int(v)
-
-
-# Parse out major version as a string (i.e. '3.2')
-def getMajorVersion(version):
-    l = version.split('.')
-    return l[0] + '.' + l[1]
-
-
-# Get next available minor version based on version sent in
-# i.e.  3.2.11-ent  would return 3.2.12-ent if enabled
-#       Note that it might skip versions too : 3.2.11-ent -> 3.2.14-ent
-def getNextMinorVersion(automationConfig, version):
-    retVal = None
-    currentMinor = getMinorVersion(version)
-    desiredMinor = 999
-    currentMajor = getMajorVersion(version)
-
-    for v in automationConfig['mongoDbVersions'] :
-        if getMajorVersion(v['name']) == currentMajor and \
-                getMinorVersion(v['name']) > currentMinor and \
-                v['name'].endswith('ent') == version.endswith('ent') and \
-                getMinorVersion(v['name']) < desiredMinor:
-            desiredMinor = getMinorVersion(v['name'])
-            retVal = v['name']
-
-    return retVal
-
-
-
-
-# get UTC Offset
-def getUTCOffset():
-    now_timestamp = time.time()
-    return (datetime.fromtimestamp(now_timestamp) - datetime.utcfromtimestamp(now_timestamp))
-
-
 # Strip port number from OpsMgr host
 def getHostName(hostnameAndPort):
-    return hostnameAndPort.split(':')[0]
+    return splitHostAndPort(hostnameAndPort)[0]
 
 
 # Get port number from OpsMgr host
 def getPort(hostnameAndPort):
-    retVal = None
-    p = hostnameAndPort.split(':')
-    if len(p) > 1:
-        retVal = int(p[1])
-    return retVal
-
+    return splitHostAndPort(hostnameAndPort)[1]
 
 def parseQueryableCollInfo(settings):
     db_coll = settings.restoreCollection
@@ -276,10 +222,12 @@ def splitHostAndPort(host_port_string):
     
 def createMongoDumpArgs(parameters, db_name, db_coll):
     host, port = splitHostAndPort(parameters.queryableProxy)
-    args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name, '-o', '/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]) ]
+    args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name ]
     if db_coll is not None:
         args.append('-c')
         args.append(db_coll)
+    args.append('-o')
+    args.append('/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]))
     print('args is ', args)
     return args
 
@@ -333,7 +281,6 @@ def waitForAutomationStatus(group_id):
 def waitForAgentInstall(group_id):
     waitForAutomationStatus(group_id)
 
-
 def buildTargetMDBUri():
     if (len(settings.destinationCluster['server']) != len(settings.destinationCluster['ports'])):
         raise Exception("length of server and ports arrays do not match, unable to build URI")
@@ -341,30 +288,3 @@ def buildTargetMDBUri():
     for i in range(len(settings.destinationCluster['server'])):
         uri +=  settings.destinationCluster['server'][i] + ":" + str(settings.destinationCluster['ports'][i]) + ","
     return uri
-    
-# Create a lock to ensure that 2 MongoBot requests cannot take an action at the same time
-# Note that for OpsMgr type actions, the lock file is the group ID from OpsMgr as it's not
-# a problem to modify different OpsMgr groups concurrently.
-class FileLock:
-    def __init__(self, filename=None):
-        self.filename = './MONGODB_AUTOMATION_LOCK_FILE' if filename is None else filename
-        self.lock_file = open(self.filename, 'w+')
-
-    def unlock(self):
-        fcntl.flock(self.lock_file, fcntl.LOCK_UN)
-
-    def lock(self):
-        waited = 0
-        while True:
-            try:
-                fcntl.flock(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-
-                return True
-            except IOError as e:
-                if e.errno != errno.EAGAIN:
-                    raise e
-                else:
-                    time.sleep(1)
-                    waited += 1
-                    if waited >= settings.waitForGroupLockSeconds:
-                        return False

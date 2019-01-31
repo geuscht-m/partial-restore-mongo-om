@@ -5,6 +5,7 @@ import requests
 import pymongo
 import subprocess
 import pprint
+import time
 
 def getQueryableBackupInfo(group_name, cluster, timestamp):
     group_id = utils.getOpsMgrGroupId(group_name)
@@ -94,6 +95,7 @@ def createDestinationCluster(parameters):
     if not utils.isMonitoringAgentPresent(config):
         utils.installMonitoringAgent(dest_group_id, monitoring_config)
         #raise Exception("Stop the madness!")
+        time.sleep(5)
         utils.waitForAutomationStatus(dest_group_id)
         
     replicaSetMembers = []
