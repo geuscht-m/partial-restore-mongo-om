@@ -221,13 +221,13 @@ def splitHostAndPort(host_port_string):
         return (None, None)
     
 def createMongoDumpArgs(parameters, db_name, db_coll):
-    host, port = splitHostAndPort(parameters.queryableProxy)
+    host, port = splitHostAndPort(parameters.queryableBackupSettings['queryableProxy'])
     args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name ]
     if db_coll is not None:
         args.append('-c')
         args.append(db_coll)
     args.append('-o')
-    args.append('/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]))
+    args.append('/'.join([ parameters.queryableBackupSettings['dumpPath'], parameters.queryableBackupSettings['dumpName']]))
     print('args is ', args)
     return args
 

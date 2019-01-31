@@ -60,7 +60,7 @@ def runTheWholeThing(group_name, cluster, timestamp, collection_name, settings_f
 
 
 def checkQueryableBackupAccess(settings):
-    qb_proxy = settings.queryableProxy
+    qb_proxy = settings.queryableBackupSettings['queryableProxy']
     db_name,db_coll  = utils.parseQueryableCollInfo(settings)
 
     if db_name is None:
@@ -79,7 +79,7 @@ def checkQueryableBackupAccess(settings):
     return False
 
 def runMongoDump(parameters):
-    dump_path = parameters.queryableDumpPath
+    dump_path = parameters.queryableBackupSettings['dumpPath']
     db_name,db_coll = utils.parseQueryableCollInfo(parameters)
     dump_args = utils.createMongoDumpArgs(parameters, db_name, db_coll)
     success   = subprocess.call(dump_args)
@@ -149,9 +149,8 @@ def createDestinationCluster(parameters):
     return utils.buildTargetMDBUri()
 
 def runMongoRestore(connection_str, parameters):
-    dump_path = parameters.queryableDumpPath
     db_name, db_coll = utils.parseQueryableCollInfo(parameters)
-    restore_args = utils.createMongoRestoreArgs(parameters, connection_str, db_name, db_coll, dump_path)
+    restore_args = utils.createMongoRestoreArgs(parameters, connection_str, db_name, db_coll, parameters.queryableBackupSettings['dumpPath'])
     success = subprocess.call(restore_args)
     return success == 0
 
