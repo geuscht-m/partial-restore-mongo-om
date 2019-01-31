@@ -17,9 +17,9 @@ opsmgrDefaultGroup = 'wf-test' # If O/M group is not provided in chat, we will u
 
 # Queryable Backup settings
 queryableBackupSettings = {
-    'sourceCollection': 'testdb.testcoll'
-    'queryableProxy':   'localhost:29000'
-    'dumpPath':         '/Users/timo/tmp'
+    'sourceCollection': 'testdb.testcoll',
+    'queryableProxy':   'localhost:29000',
+    'dumpPath':         '/Users/timo/tmp',
     'dumpName':         'db.dump'
 }
 
