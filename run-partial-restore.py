@@ -11,15 +11,21 @@ def runWholeProcess(group_name, cluster, timestamp, collection_name, settings_fi
     # Extract temporary restore from queryable backup
     if checkQueryableBackupAccess(settings):
         print('Looks like we have a working queryable backup')
-        if runMongoDump(settings):
+        if runMongoDump(utils.buildMongoDBURI(settings.queryableBackupSettings['queryableProxy']),
+                        settings.queryableBackupSettings['sourceCollection'],
+                        settings.queryableBackupSettings['dumpPath'],
+                        settings.queryableBackupSettings['dumpName']):
             conn_str = createDestinationCluster(settings)
             runMongoRestore(conn_str, settings)
     else:
         print("Couldn't find database or collection, aborting")
     # Restore into target cluster
-    if runMongodDump(settings.tempDestinationCluster['clusterInfo'], settings.queryableBackupSettings['sourceCollection'])
-        checkAndDropTargetCollection(settings.restoreTargetCluster['targetCluster'], settings.restoreTargetCluster['destCollection']C)
-        conn_str = utils.createMongoDBURI(settings.restoreTargetCluster['targetCluster'])
+    if runMongoDump(utils.buildMongoDBURI(settings.tempDestinationCluster['targetCluster']),
+                     settings.queryableBackupSettings['sourceCollection'],
+                     settings.restoreTargetCluster['dumpPath'],
+                     settings.restoreTargetCluster['dumpName']):
+        checkAndDropTargetCollection(settings.restoreTargetCluster['targetCluster'], settings.restoreTargetCluster['destCollection'])
+        conn_str = utils.buildMongoDBURI(settings.restoreTargetCluster['targetCluster'])
         runMongoRestore(conn_str, settings)
 
 
@@ -146,7 +152,7 @@ def createDestinationCluster(parameters):
     if not success:
         raise Exception("Pushing the new replica set configuration failed")
     utils.waitForAutomationStatus(dest_group_id)
-    return utils.buildTargetMDBUri()
+    return utils.buildMongoDBURI(settings.tempDestinationCluster['targetCluster'])
 
 def runMongoRestore(connection_str, parameters):
     db_name, db_coll = utils.parseQueryableCollInfo(parameters)
@@ -163,10 +169,11 @@ def getSourceClusterMonitoringConfig(clusterName, parameters):
 
 def checkAndDropTargetCollection(cluster_info, namespace):
     db_name, db_coll = utils.parseCollNamespaceInfo(namespace)
-    conn_info  = utils.buildMongodBDURI(cluster_info)
+    conn_info  = utils.buildMongoDBURI(cluster_info)
     connection = pymongo.MongoClient(conn_info)
     db = connection[db_name]
     if db_coll and db_coll in db.collection_names():
-        db.drop_collection(db_name)
+        print('Dropping target collection', db_coll)
+        db.drop_collection(db_coll)
 
-runTheWholeThing("Initial Group", "wf-test", 0, "testcoll", "settings")
+runWholeProcess("Initial Group", "wf-test", 0, "testcoll", "settings")

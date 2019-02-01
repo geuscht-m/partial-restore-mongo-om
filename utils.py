@@ -223,9 +223,9 @@ def splitHostAndPort(host_port_string):
     else:
         return (None, None)
     
-def createMongoDumpArgs(fromClusterInfo, dump_path, dump_name db_name, db_coll):
-    host, port = splitHostAndPort(fromClusterInfo)
-    args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name ]
+def createMongoDumpArgs(clusterURI, dump_path, dump_name, db_name, db_coll):
+    #host, port = splitHostAndPort(fromClusterInfo)
+    args = [ 'mongodump', '--uri', clusterURI + '/' + db_name ]
     if db_coll is not None:
         args.append('-c')
         args.append(db_coll)

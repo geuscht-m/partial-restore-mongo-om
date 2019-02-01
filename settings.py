@@ -11,14 +11,14 @@ waitForRestartSeconds = 15
 # Ops Manager settings
 opsmgrServerUrl = 'http://localhost:8080' # Be sure there is no trailing slash here
 opsmgrUser = 'admin'
-opsmgrApiKey = '8155a1a2-99e2-4eac-9e13-d61855420afb'
+opsmgrApiKey = '22bab1de-be44-4f33-963b-99a0dec2b875'
 opsmgrWebHookReturnValue = '{"ok": true}' # Value OpsMgr want to see returned from the webhook if all went well
 opsmgrDefaultGroup = 'wf-test' # If O/M group is not provided in chat, we will use this one
 
 # Queryable Backup settings
 queryableBackupSettings = {
     'sourceCollection': 'testdb.testcoll',
-    'queryableProxy':   'localhost:29000',
+    'queryableProxy':   [ 'localhost:29000' ],
     'dumpPath':         '/Users/timo/tmp',
     'dumpName':         'db.dump'
 }
@@ -31,6 +31,7 @@ sourceCluster = {
 tempDestinationCluster = {
     'group' : 'Restore Group',
     'cluster': 'wf-restore',
+    'targetCluster': ['r1:28000','r1:28001','r2:28002' ],
     'server': ['r1'], # NOTE: Number entries in server and ports array must match
     'ports': [ 28000 ],
     'rs-size': 3,  # NOTE: number of members in the replica set (per shard if sharded cluster)
