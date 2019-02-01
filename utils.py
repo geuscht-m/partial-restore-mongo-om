@@ -197,8 +197,8 @@ def getHostName(hostnameAndPort):
 def getPort(hostnameAndPort):
     return splitHostAndPort(hostnameAndPort)[1]
 
-def parseQueryableCollInfo(settings):
-    db_coll = settings.restoreCollection
+def parseQueryableCollInfo(parameters):
+    db_coll = parameters.queryableBackupSettings['sourceCollection']
     parts = db_coll.split('.')
     num_parts = len(parts)
     if num_parts == 0:
@@ -221,13 +221,13 @@ def splitHostAndPort(host_port_string):
         return (None, None)
     
 def createMongoDumpArgs(parameters, db_name, db_coll):
-    host, port = splitHostAndPort(parameters.queryableProxy)
+    host, port = splitHostAndPort(parameters.queryableBackupSettings['queryableProxy'])
     args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name ]
     if db_coll is not None:
         args.append('-c')
         args.append(db_coll)
     args.append('-o')
-    args.append('/'.join([ parameters.queryableDumpPath, parameters.queryableDumpName]))
+    args.append('/'.join([ parameters.queryableBackupSettings['dumpPath'], parameters.queryableBackupSettings['dumpName']]))
     print('args is ', args)
     return args
 
@@ -246,11 +246,11 @@ def isMonitoringAgentPresent(config):
 def installMonitoringAgent(group_id, monitoring_config):
     if not monitoring_config:
         raise Exception("Source monitoring config is empty, cannot duplicate")
-    if not settings.destinationCluster['server']:
+    if not settings.tempDestinationCluster['server']:
         raise Exception("No destination servers specified")
     #first_server_monitoring = monitoring_config[0]
     #first_server_monitoring['hostname'] = settings.destinationCluster['server'][0]
-    monitoring_hostname = settings.destinationCluster['server'][0]
+    monitoring_hostname = settings.tempDestinationCluster['server'][0]
     monitoring_settings = { 'hostname':monitoring_hostname }
     #pp = pprint.PrettyPrinter(indent = 2)
     #pp.pprint(first_server_monitoring)
@@ -282,9 +282,9 @@ def waitForAgentInstall(group_id):
     waitForAutomationStatus(group_id)
 
 def buildTargetMDBUri():
-    if (len(settings.destinationCluster['server']) != len(settings.destinationCluster['ports'])):
+    if (len(settings.tempDestinationCluster['server']) != len(settings.tempDestinationCluster['ports'])):
         raise Exception("length of server and ports arrays do not match, unable to build URI")
     uri = "mongodb://"
-    for i in range(len(settings.destinationCluster['server'])):
-        uri +=  settings.destinationCluster['server'][i] + ":" + str(settings.destinationCluster['ports'][i]) + ","
+    for i in range(len(settings.tempDestinationCluster['server'])):
+        uri +=  settings.tempDestinationCluster['server'][i] + ":" + str(settings.tempDestinationCluster['ports'][i]) + ","
     return uri
