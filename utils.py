@@ -199,7 +199,10 @@ def getPort(hostnameAndPort):
 
 def parseQueryableCollInfo(parameters):
     db_coll = parameters.queryableBackupSettings['sourceCollection']
-    parts = db_coll.split('.')
+    return parseCollNamespaceInfo(db_coll)
+
+def parseCollNamespaceInfo(namespace_info):
+    parts = namespace_info.split('.')
     num_parts = len(parts)
     if num_parts == 0:
         return (None, None)
@@ -220,14 +223,14 @@ def splitHostAndPort(host_port_string):
     else:
         return (None, None)
     
-def createMongoDumpArgs(parameters, db_name, db_coll):
-    host, port = splitHostAndPort(parameters.queryableBackupSettings['queryableProxy'])
+def createMongoDumpArgs(fromClusterInfo, dump_path, dump_name db_name, db_coll):
+    host, port = splitHostAndPort(fromClusterInfo)
     args = [ 'mongodump', '--host', host, '--port', port, '-d', db_name ]
     if db_coll is not None:
         args.append('-c')
         args.append(db_coll)
     args.append('-o')
-    args.append('/'.join([ parameters.queryableBackupSettings['dumpPath'], parameters.queryableBackupSettings['dumpName']]))
+    args.append('/'.join([dump_path, dump_name]))
     print('args is ', args)
     return args
 
@@ -281,10 +284,10 @@ def waitForAutomationStatus(group_id):
 def waitForAgentInstall(group_id):
     waitForAutomationStatus(group_id)
 
-def buildTargetMDBUri():
-    if (len(settings.tempDestinationCluster['server']) != len(settings.tempDestinationCluster['ports'])):
-        raise Exception("length of server and ports arrays do not match, unable to build URI")
-    uri = "mongodb://"
-    for i in range(len(settings.tempDestinationCluster['server'])):
-        uri +=  settings.tempDestinationCluster['server'][i] + ":" + str(settings.tempDestinationCluster['ports'][i]) + ","
+def buildMongoDBURI(clusterInfo):
+#    if (len(settings.tempDestinationCluster['server']) != len(settings.tempDestinationCluster['ports'])):
+#        raise Exception("length of server and ports arrays do not match, unable to build URI")
+    uri = "mongodb://" + ','.join(clusterInfo)
+#    for i in range(len(settings.tempDestinationCluster['server'])):
+#        uri +=  settings.tempDestinationCluster['server'][i] + ":" + str(settings.tempDestinationCluster['ports'][i]) + ","
     return uri

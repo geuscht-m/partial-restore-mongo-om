@@ -7,6 +7,22 @@ import subprocess
 import pprint
 import time
 
+def runWholeProcess(group_name, cluster, timestamp, collection_name, settings_file):
+    # Extract temporary restore from queryable backup
+    if checkQueryableBackupAccess(settings):
+        print('Looks like we have a working queryable backup')
+        if runMongoDump(settings):
+            conn_str = createDestinationCluster(settings)
+            runMongoRestore(conn_str, settings)
+    else:
+        print("Couldn't find database or collection, aborting")
+    # Restore into target cluster
+    if runMongodDump(settings.tempDestinationCluster['clusterInfo'], settings.queryableBackupSettings['sourceCollection'])
+        checkAndDropTargetCollection(settings.restoreTargetCluster['targetCluster'], settings.restoreTargetCluster['destCollection']C)
+        conn_str = utils.createMongoDBURI(settings.restoreTargetCluster['targetCluster'])
+        runMongoRestore(conn_str, settings)
+
+
 def getQueryableBackupInfo(group_name, cluster, timestamp):
     group_id = utils.getOpsMgrGroupId(group_name)
     clusterID, replSets = getClusters(group_id, cluster)
@@ -26,9 +42,6 @@ def stopTempMongoD(tempDB, settingInfo):
     updateAutomationConfig(autoConfig)
     return waitForDeployment(autoConfig)
 
-def loadSettingsFile(file_name):
-    return {'tmpRestoreGroup': 'abd', 'RSSettings': 'wf-restore'}
-
 def getClusters(group_id, cluster_name):
     print("Trying to get cluster id for group", group_id, "cluster", cluster_name)
     cluster_id, repl_sets = utils.getClusterId(group_id, cluster_name)
@@ -46,18 +59,6 @@ def addSettings(config):
 
 def removeSettings(config):
     return config
-    
-def runTheWholeThing(group_name, cluster, timestamp, collection_name, settings_file):
-    storedSettings = loadSettingsFile(settings_file)
-
-    if checkQueryableBackupAccess(settings):
-        print('Looks like we have a working queryable backup')
-        if runMongoDump(settings):
-            conn_str = createDestinationCluster(settings)
-            runMongoRestore(conn_str, settings)
-    else:
-        print("Couldn't find database or collection, aborting")
-
 
 def checkQueryableBackupAccess(settings):
     qb_proxy = settings.queryableBackupSettings['queryableProxy']
@@ -78,10 +79,9 @@ def checkQueryableBackupAccess(settings):
             return True
     return False
 
-def runMongoDump(parameters):
-    dump_path = parameters.queryableBackupSettings['dumpPath']
-    db_name,db_coll = utils.parseQueryableCollInfo(parameters)
-    dump_args = utils.createMongoDumpArgs(parameters, db_name, db_coll)
+def runMongoDump(fromClusterInfo, namespace, dump_path, dump_name):
+    db_name, db_coll = utils.parseCollNamespaceInfo(namespace)
+    dump_args = utils.createMongoDumpArgs(fromClusterInfo, dump_path, dump_name, db_name, db_coll)
     success   = subprocess.call(dump_args)
     print('Output from mongodump:', success)
     return success == 0
@@ -160,5 +160,13 @@ def getSourceClusterMonitoringConfig(clusterName, parameters):
     #pp = pprint.PrettyPrinter(indent=2)
     #pp.pprint(config)
     return config['monitoringVersions']
+
+def checkAndDropTargetCollection(cluster_info, namespace):
+    db_name, db_coll = utils.parseCollNamespaceInfo(namespace)
+    conn_info  = utils.buildMongodBDURI(cluster_info)
+    connection = pymongo.MongoClient(conn_info)
+    db = connection[db_name]
+    if db_coll and db_coll in db.collection_names():
+        db.drop_collection(db_name)
 
 runTheWholeThing("Initial Group", "wf-test", 0, "testcoll", "settings")
