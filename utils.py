@@ -285,9 +285,5 @@ def waitForAgentInstall(group_id):
     waitForAutomationStatus(group_id)
 
 def buildMongoDBURI(clusterInfo):
-#    if (len(settings.tempDestinationCluster['server']) != len(settings.tempDestinationCluster['ports'])):
-#        raise Exception("length of server and ports arrays do not match, unable to build URI")
     uri = "mongodb://" + ','.join(clusterInfo)
-#    for i in range(len(settings.tempDestinationCluster['server'])):
-#        uri +=  settings.tempDestinationCluster['server'][i] + ":" + str(settings.tempDestinationCluster['ports'][i]) + ","
     return uri

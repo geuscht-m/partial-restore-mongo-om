@@ -31,9 +31,8 @@ sourceCluster = {
 tempDestinationCluster = {
     'group' : 'Restore Group',
     'cluster': 'wf-restore',
-    'targetCluster': ['r1:28000','r1:28001','r2:28002' ],
-    'server': ['r1'], # NOTE: Number entries in server and ports array must match
-    'ports': [ 28000 ],
+    #'targetCluster': ['r1:28000','r1:28001','r2:28002' ],
+    'targetCluster': ['r1:28000'],
     'rs-size': 3,  # NOTE: number of members in the replica set (per shard if sharded cluster)
     'rs-name': 'wf-restore',
     'shards': 0,   # NOTE: shards 0 means plain replica set

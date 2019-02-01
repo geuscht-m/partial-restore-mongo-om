@@ -106,11 +106,12 @@ def createDestinationCluster(parameters):
         
     replicaSetMembers = []
     rs_index = 0
-    for index, port in enumerate(parameters.tempDestinationCluster['ports']):
+    for rs_member in parameters.tempDestinationCluster['targetCluster']:
+        server, port = utils.splitHostAndPort(rs_member)
         process = {
             'version': '4.0.4',
             'name': parameters.tempDestinationCluster['cluster'] + '_' + str(port),
-            'hostname': parameters.tempDestinationCluster['server'][index],
+            'hostname': server,
             'logRotate': {
                 'sizeThresholdMB': 1000.0,
                 'timeThresholdHrs': 24
