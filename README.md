@@ -45,7 +45,10 @@ All user relevant settings are in the file settings.py. The important settings a
 - dumpName: Name of the dump directory
 - targetCluster: array containing a list of servers making up the replica set that is the target of the restore
 - destCollection: Collection to restore to
+- user: specifies the authenticated user for restore if authentication on the restoration target is enabled
+- password: specifies the password for user authentication if authentication is enabled on the restoration target
 
 ## TODO
 
 - Currently, the intermediate replica set needs to be removed manually and its storage directory deleted.
+- Support additional authentication mechanisms

@@ -232,13 +232,13 @@ def createMongoDumpArgs(clusterURI, dump_path, dump_name, db_name, db_coll):
         args.append(db_coll)
     args.append('-o')
     args.append('/'.join([dump_path, dump_name]))
-    print('args is ', args)
+    #print('args is ', args)
     return args
 
 def createMongoRestoreArgs(parameters, conn_str, db_name, db_coll, dump_path):
     args = [ 'mongorestore', '--uri=' + conn_str, '--nsInclude', db_name + '.' + db_coll]
     args.append(dump_path + '/db.dump/')
-    print('restore args is', args)
+    #print('restore args is', args)
     return args
 
 def isMonitoringAgentPresent(config):
@@ -285,6 +285,13 @@ def waitForAutomationStatus(group_id):
 def waitForAgentInstall(group_id):
     waitForAutomationStatus(group_id)
 
-def buildMongoDBURI(clusterInfo):
-    uri = "mongodb://" + ','.join(clusterInfo)
+def buildMongoDBURI(clusterInfo, serverInfo):
+    auth = ''
+    if clusterInfo and 'user' in clusterInfo:
+        user = clusterInfo['user']
+        if not 'password' in clusterInfo:
+            raise Exception("User specified, but password is missing. Cannot construct mongodb uri")
+        password = clusterInfo['password']
+        auth = user + ":" + password + "@"
+    uri = "mongodb://" + auth + ','.join(clusterInfo[serverInfo])
     return uri

@@ -45,5 +45,7 @@ restoreTargetCluster = {
     'dumpPath': '/Users/timo/tmp',
     'dumpName': 'db.dump2',
     'targetCluster': ['n1:26000','n1:26001','n2:26051'],
-    'destCollection': 'testdb.testcoll'
+    'destCollection': 'testdb.testcoll',
+    'user':'test-user',
+    'password':'test-password'
 }

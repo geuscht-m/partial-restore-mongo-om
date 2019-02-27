@@ -11,7 +11,7 @@ def runWholeProcess(group_name, cluster, timestamp, collection_name, settings_fi
     # Extract temporary restore from queryable backup
     if checkQueryableBackupAccess(settings):
         print('Looks like we have a working queryable backup')
-        if runMongoDump(utils.buildMongoDBURI(settings.queryableBackupSettings['queryableProxy']),
+        if runMongoDump(utils.buildMongoDBURI(settings.queryableBackupSettings, "queryableProxy"),
                         settings.queryableBackupSettings['sourceCollection'],
                         settings.queryableBackupSettings['dumpPath'],
                         settings.queryableBackupSettings['dumpName']):
@@ -20,12 +20,12 @@ def runWholeProcess(group_name, cluster, timestamp, collection_name, settings_fi
     else:
         print("Couldn't find database or collection, aborting")
     # Restore into target cluster
-    if runMongoDump(utils.buildMongoDBURI(settings.tempDestinationCluster['targetCluster']),
+    if runMongoDump(utils.buildMongoDBURI(settings.tempDestinationCluster, "targetCluster"),
                      settings.queryableBackupSettings['sourceCollection'],
                      settings.restoreTargetCluster['dumpPath'],
                      settings.restoreTargetCluster['dumpName']):
-        checkAndDropTargetCollection(settings.restoreTargetCluster['targetCluster'], settings.restoreTargetCluster['destCollection'])
-        conn_str = utils.buildMongoDBURI(settings.restoreTargetCluster['targetCluster'])
+        checkAndDropTargetCollection(settings.restoreTargetCluster, settings.restoreTargetCluster['destCollection'])
+        conn_str = utils.buildMongoDBURI(settings.restoreTargetCluster, "targetCluster")
         runMongoRestore(conn_str, settings)
 
 
@@ -89,7 +89,7 @@ def runMongoDump(fromClusterInfo, namespace, dump_path, dump_name):
     db_name, db_coll = utils.parseCollNamespaceInfo(namespace)
     dump_args = utils.createMongoDumpArgs(fromClusterInfo, dump_path, dump_name, db_name, db_coll)
     success   = subprocess.call(dump_args)
-    print('Output from mongodump:', success)
+    #print('Output from mongodump:', success)
     return success == 0
     
 def createDestinationCluster(parameters):
@@ -142,13 +142,13 @@ def createDestinationCluster(parameters):
                                    'members': replicaSetMembers,
                                    'protocolVersion':parameters.tempDestinationCluster['protocolVersion']})
             
-    pp =  pprint.PrettyPrinter(indent=2)
-    pp.pprint(config)
+    #pp =  pprint.PrettyPrinter(indent=2)
+    #pp.pprint(config)
     success = utils.pushAutomationConfig(dest_group_id, config)
     if not success:
         raise Exception("Pushing the new replica set configuration failed")
     utils.waitForAutomationStatus(dest_group_id)
-    return utils.buildMongoDBURI(settings.tempDestinationCluster['targetCluster'])
+    return utils.buildMongoDBURI(settings.tempDestinationCluster, "targetCluster")
 
 def runMongoRestore(connection_str, parameters):
     db_name, db_coll = utils.parseQueryableCollInfo(parameters)
@@ -165,7 +165,7 @@ def getSourceClusterMonitoringConfig(clusterName, parameters):
 
 def checkAndDropTargetCollection(cluster_info, namespace):
     db_name, db_coll = utils.parseCollNamespaceInfo(namespace)
-    conn_info  = utils.buildMongoDBURI(cluster_info)
+    conn_info  = utils.buildMongoDBURI(cluster_info, "targetCluster")
     connection = pymongo.MongoClient(conn_info)
     db = connection[db_name]
     if db_coll and db_coll in db.collection_names():
