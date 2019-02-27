@@ -11,17 +11,18 @@ import pprint
 # Helper - build the URLs
 def urlBuilder(settings, *parameters):
     #print('len parameters is', len(parameters), 'parameters is', parameters)
-    retval = settings.opsmgrServerUrl + '/api/public/v1.0/'
+    retval = settings.opsMgrSettings['serverUrl'] + '/api/public/v1.0/'
     retval += '/'.join(filter(None, parameters))
     return retval
 
 def authBuilder(settings):
-    return HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey)
+    return HTTPDigestAuth(settings.opsMgrSettings['user'], settings.opsMgrSettings['apiKey'])
 
 # get groupID from OpsMgr given a group name
 def getOpsMgrGroupId(name):
     retVal = None
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups'
+    #url = settings.opsmgrServerUrl + '/api/public/v1.0/groups'
+    url = urlBuilder(settings, 'groups')
     resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         # This means something went wrong.
@@ -79,7 +80,7 @@ def getOpsMgrHost(name, group):
     return retVal
 
 def getGroupIdFromName(group_name):
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/byName/' + urllib.quote(group_name)
+    url = urlBuilder(settings, 'groups', 'byName', urllib.quote(group_name))
     #print('group id from name url is ', url)
     resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
@@ -231,13 +232,13 @@ def createMongoDumpArgs(clusterURI, dump_path, dump_name, db_name, db_coll):
         args.append(db_coll)
     args.append('-o')
     args.append('/'.join([dump_path, dump_name]))
-    print('args is ', args)
+    #print('args is ', args)
     return args
 
 def createMongoRestoreArgs(parameters, conn_str, db_name, db_coll, dump_path):
     args = [ 'mongorestore', '--uri=' + conn_str, '--nsInclude', db_name + '.' + db_coll]
     args.append(dump_path + '/db.dump/')
-    print('restore args is', args)
+    #print('restore args is', args)
     return args
 
 def isMonitoringAgentPresent(config):
@@ -249,20 +250,20 @@ def isMonitoringAgentPresent(config):
 def installMonitoringAgent(group_id, monitoring_config):
     if not monitoring_config:
         raise Exception("Source monitoring config is empty, cannot duplicate")
-    if not settings.tempDestinationCluster['server']:
+    if not settings.tempDestinationCluster['targetCluster']:
         raise Exception("No destination servers specified")
     #first_server_monitoring = monitoring_config[0]
     #first_server_monitoring['hostname'] = settings.destinationCluster['server'][0]
-    monitoring_hostname = settings.tempDestinationCluster['server'][0]
+    monitoring_hostname, port = splitHostAndPort(settings.tempDestinationCluster['targetCluster'][0])
     monitoring_settings = { 'hostname':monitoring_hostname }
     #pp = pprint.PrettyPrinter(indent = 2)
     #pp.pprint(first_server_monitoring)
     config = getAutomationConfig(group_id)
     config['monitoringVersions'].append(monitoring_settings)
     #config['backupVersions'][0]['hostname'] = settings.destinationCluster['server'][0]
-    #json_config = json.dumps(config)
-    #pp = pprint.PrettyPrinter(indent = 2)
-    #pp.pprint(json_config)
+    json_config = json.dumps(config)
+    pp = pprint.PrettyPrinter(indent = 2)
+    pp.pprint(json_config)
     pushAutomationConfig(group_id, config)
     #waitForAutomationStatus(group_id)
                         
@@ -284,6 +285,13 @@ def waitForAutomationStatus(group_id):
 def waitForAgentInstall(group_id):
     waitForAutomationStatus(group_id)
 
-def buildMongoDBURI(clusterInfo):
-    uri = "mongodb://" + ','.join(clusterInfo)
+def buildMongoDBURI(clusterInfo, serverInfo):
+    auth = ''
+    if clusterInfo and 'user' in clusterInfo:
+        user = clusterInfo['user']
+        if not 'password' in clusterInfo:
+            raise Exception("User specified, but password is missing. Cannot construct mongodb uri")
+        password = clusterInfo['password']
+        auth = user + ":" + password + "@"
+    uri = "mongodb://" + auth + ','.join(clusterInfo[serverInfo])
     return uri
