@@ -11,17 +11,18 @@ import pprint
 # Helper - build the URLs
 def urlBuilder(settings, *parameters):
     #print('len parameters is', len(parameters), 'parameters is', parameters)
-    retval = settings.opsmgrServerUrl + '/api/public/v1.0/'
+    retval = settings.opsMgrSettings['serverUrl'] + '/api/public/v1.0/'
     retval += '/'.join(filter(None, parameters))
     return retval
 
 def authBuilder(settings):
-    return HTTPDigestAuth(settings.opsmgrUser, settings.opsmgrApiKey)
+    return HTTPDigestAuth(settings.opsMgrSettings['user'], settings.opsMgrSettings['apiKey'])
 
 # get groupID from OpsMgr given a group name
 def getOpsMgrGroupId(name):
     retVal = None
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups'
+    #url = settings.opsmgrServerUrl + '/api/public/v1.0/groups'
+    url = urlBuilder(settings, 'groups')
     resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
         # This means something went wrong.
@@ -79,7 +80,7 @@ def getOpsMgrHost(name, group):
     return retVal
 
 def getGroupIdFromName(group_name):
-    url = settings.opsmgrServerUrl + '/api/public/v1.0/groups/byName/' + urllib.quote(group_name)
+    url = urlBuilder(settings, 'groups', 'byName', urllib.quote(group_name))
     #print('group id from name url is ', url)
     resp = requests.get(url, auth=authBuilder(settings))
     if resp.status_code != 200:
@@ -249,20 +250,20 @@ def isMonitoringAgentPresent(config):
 def installMonitoringAgent(group_id, monitoring_config):
     if not monitoring_config:
         raise Exception("Source monitoring config is empty, cannot duplicate")
-    if not settings.tempDestinationCluster['server']:
+    if not settings.tempDestinationCluster['targetCluster']:
         raise Exception("No destination servers specified")
     #first_server_monitoring = monitoring_config[0]
     #first_server_monitoring['hostname'] = settings.destinationCluster['server'][0]
-    monitoring_hostname = settings.tempDestinationCluster['server'][0]
+    monitoring_hostname, port = splitHostAndPort(settings.tempDestinationCluster['targetCluster'][0])
     monitoring_settings = { 'hostname':monitoring_hostname }
     #pp = pprint.PrettyPrinter(indent = 2)
     #pp.pprint(first_server_monitoring)
     config = getAutomationConfig(group_id)
     config['monitoringVersions'].append(monitoring_settings)
     #config['backupVersions'][0]['hostname'] = settings.destinationCluster['server'][0]
-    #json_config = json.dumps(config)
-    #pp = pprint.PrettyPrinter(indent = 2)
-    #pp.pprint(json_config)
+    json_config = json.dumps(config)
+    pp = pprint.PrettyPrinter(indent = 2)
+    pp.pprint(json_config)
     pushAutomationConfig(group_id, config)
     #waitForAutomationStatus(group_id)
                         

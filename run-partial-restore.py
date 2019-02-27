@@ -93,16 +93,13 @@ def runMongoDump(fromClusterInfo, namespace, dump_path, dump_name):
     return success == 0
     
 def createDestinationCluster(parameters):
-    monitoring_config = getSourceClusterMonitoringConfig(parameters.sourceCluster['group'], parameters)
+    #monitoring_config = getSourceClusterMonitoringConfig(parameters.sourceCluster['group'], parameters)
     dest_group_id = utils.getGroupIdFromName(parameters.tempDestinationCluster['group'])
     config = utils.getAutomationConfig(dest_group_id)
     #utils.pushAutomationConfig(parameters.sourceCluster['group'], config)
     #raise Exception("push done")
     if not utils.isMonitoringAgentPresent(config):
-        utils.installMonitoringAgent(dest_group_id, monitoring_config)
-        #raise Exception("Stop the madness!")
-        time.sleep(5)
-        utils.waitForAutomationStatus(dest_group_id)
+        raise Exception("Monitoring agent not present, aborting creation of temporary cluster")
         
     replicaSetMembers = []
     rs_index = 0

@@ -9,11 +9,11 @@ checkUpgradeStatusSeconds = 5
 waitForRestartSeconds = 15
 
 # Ops Manager settings
-opsmgrServerUrl = 'http://localhost:8080' # Be sure there is no trailing slash here
-opsmgrUser = 'admin'
-opsmgrApiKey = '22bab1de-be44-4f33-963b-99a0dec2b875'
-opsmgrWebHookReturnValue = '{"ok": true}' # Value OpsMgr want to see returned from the webhook if all went well
-opsmgrDefaultGroup = 'wf-test' # If O/M group is not provided in chat, we will use this one
+opsMgrSettings = {
+    'serverUrl': 'http://localhost:8080', # Be sure there is no trailing slash here
+    'user': 'admin',
+    'apiKey': 'e9771327-fe09-4a3f-8fb4-3289ff2aa75b'
+}
 
 # Queryable Backup settings
 queryableBackupSettings = {
@@ -23,9 +23,9 @@ queryableBackupSettings = {
     'dumpName':         'db.dump'
 }
 
-sourceCluster = {
-    'group' : 'Initial Group'
-}
+#sourceCluster = {
+#    'group' : 'Initial Group'
+#}
 
 # Where to stand up the cluster that the queryable backup gets restored into
 tempDestinationCluster = {
@@ -33,7 +33,6 @@ tempDestinationCluster = {
     'cluster': 'wf-restore',
     #'targetCluster': ['r1:28000','r1:28001','r2:28002' ],
     'targetCluster': ['r1:28000'],
-    'rs-size': 3,  # NOTE: number of members in the replica set (per shard if sharded cluster)
     'rs-name': 'wf-restore',
     'shards': 0,   # NOTE: shards 0 means plain replica set
     'protocolVersion': 1

@@ -18,6 +18,11 @@ Before running the script, the following preconditions need to be met:
 
 All user relevant settings are in the file settings.py. The important settings are:
 
+### opsMgrSettings - settings used to access Ops Manager
+- serverUrl: Where to find the OM instance to talk to
+- user: OM user to use for authentication. Needs to have appropriate privileges to be able to create new replica sets
+- apiKey: OM api key for _user_
+
 ### queryableBackupSettings - defines how to connect to the queryable backup instance
 
 - sourceCollection - name of the collection to pull the data from
@@ -30,6 +35,7 @@ All user relevant settings are in the file settings.py. The important settings a
 - group: OM group to create the temporary servers in
 - cluster: name of the cluster to create
 - targetCluster is an array containing the names of the servers and port numbers to be used to create the temporary restore target. If the array has a single element, the script will spin up a single standalone mongod, otherwise it will spin up a replica set.
+- rs-name: Name of the temporary replica set, applied when the replica set is created
 - shards: specify the number of shards, 0 signalling either a replica set or a standalone instance. _Reserved for future use, sharded cluster creation is currently not supported_.
 
 ### restoreTargetCluster - defines the final target for the restore process
