@@ -37,6 +37,8 @@ All user relevant settings are in the file settings.py. The important settings a
 - targetCluster is an array containing the names of the servers and port numbers to be used to create the temporary restore target. If the array has a single element, the script will spin up a single standalone mongod, otherwise it will spin up a replica set.
 - rs-name: Name of the temporary replica set, applied when the replica set is created
 - shards: specify the number of shards, 0 signalling either a replica set or a standalone instance. _Reserved for future use, sharded cluster creation is currently not supported_.
+- mongo-version: specifies the version of mongodb that Ops Manager uses for the intermediate replica set
+- featureCompatibility: feature compatibility version used by the intermediate replica set. Needs to match or exceed the feature compatibility required by the source data
 
 ### restoreTargetCluster - defines the final target for the restore process
 - dumpPath: Path to temporary storage for the dump taken from the temporary replica set/cluster

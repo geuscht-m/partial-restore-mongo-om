@@ -93,11 +93,9 @@ def runMongoDump(fromClusterInfo, namespace, dump_path, dump_name):
     return success == 0
     
 def createDestinationCluster(parameters):
-    #monitoring_config = getSourceClusterMonitoringConfig(parameters.sourceCluster['group'], parameters)
     dest_group_id = utils.getGroupIdFromName(parameters.tempDestinationCluster['group'])
     config = utils.getAutomationConfig(dest_group_id)
-    #utils.pushAutomationConfig(parameters.sourceCluster['group'], config)
-    #raise Exception("push done")
+
     if not utils.isMonitoringAgentPresent(config):
         raise Exception("Monitoring agent not present, aborting creation of temporary cluster")
         
@@ -106,7 +104,7 @@ def createDestinationCluster(parameters):
     for rs_member in parameters.tempDestinationCluster['targetCluster']:
         server, port = utils.splitHostAndPort(rs_member)
         process = {
-            'version': '4.0.4',
+            'version': parameters.tempDestinationCluster['mongo-version'],
             'name': parameters.tempDestinationCluster['cluster'] + '_' + str(port),
             'hostname': server,
             'logRotate': {
@@ -117,7 +115,7 @@ def createDestinationCluster(parameters):
             'authSchemaVersion': 5,
 
             "disabled":False,
-            "featureCompatibilityVersion":"4.0",
+            "featureCompatibilityVersion": parameters.tempDestinationCluster['featureCompatibility'],
             'processType': 'mongod',
             'args2_6': {
                 'net': { 'port': port },

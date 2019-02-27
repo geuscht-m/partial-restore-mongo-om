@@ -35,7 +35,9 @@ tempDestinationCluster = {
     'targetCluster': ['r1:28000'],
     'rs-name': 'wf-restore',
     'shards': 0,   # NOTE: shards 0 means plain replica set
-    'protocolVersion': 1
+    'protocolVersion': 1,
+    'mongo-version': '4.0.5',
+    'featureCompatibility': '4.0'
 }
 
 # Final destination of the restored backup
